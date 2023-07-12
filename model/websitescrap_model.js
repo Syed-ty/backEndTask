@@ -11,9 +11,7 @@ const urlSchema = new Schema({
     logoofWebsite: {
         type: String
     },
-    themesOfLogo:{
-        type:String
-    },
+    
     
     brandDescription: {
         type: String
@@ -21,8 +19,8 @@ const urlSchema = new Schema({
     keywords: {
         type: String
     },
-    typography:[]
-   
+    typography:[],
+    themesOfLogo:[]
 });
 
 

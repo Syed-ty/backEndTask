@@ -1,42 +1,8 @@
 const {WebSiteScrap}  = require ('../model/websitescrap_model')
 const puppeteer = require('puppeteer');
-const getAllUser = async (req, res, next) => {
-    try {
-        const userData = await WebSiteScrap.find({});
-        res.status(200).json({
-            error: false,
-            message: "all user list",
-            userData
-        })
-    } catch (err) {
-        next(err)
-    }
-}
+const getColors = require('get-image-colors')
 
 
-
-const getUserById =  async (req,res,next)=>{
-    try {
-        let user = await WebSiteScrap.findOne({_id:req.params.id})
-        res.status(200).json({error:false,message:'User fetched successfully',response:user})
-    } catch (error) {
-        next(err)
-    }
-}
-
-const getUserByEmail =  async (req,res,next)=>{
-    try {
-        let user = await WebSiteScrap.findOne({email:req.params.email})
-        res.status(200).json({
-            error:false,
-            message:'User fetched successfully based on Email',
-            response:user})
-    } catch (error) {
-        next(err)
-    }
-}
-
-// var puppeteer = require('puppeteer');
 
 const postApi = async (req, res, next) => {
     try {
@@ -45,7 +11,7 @@ const postApi = async (req, res, next) => {
         } = req.body;
     data(req.body.searchUrl)
   .then(async websiteDetails => {
-    console.log('daat', websiteDetails);
+    console.log(websiteDetails)
     const fontDetailsArray = websiteDetails.fontDetails;
     function removeDuplicates(fontDetailsArray) {
         const newArray = [];
@@ -65,12 +31,13 @@ const postApi = async (req, res, next) => {
         const trimmedElement = element.fontFamily.replace(/"/g, '');
         finalArray.push(trimmedElement);
      })
-     console.log(finalArray,'finalarray')
+   
+
       const createData = await WebSiteScrap.create({
         brandWebsite:websiteDetails.websiteURL,
         brandName:websiteDetails.websiteName,
         logoofWebsite:websiteDetails.logoSrc,
-        themesOfLogo:'#525cb',
+        themesOfLogo:websiteDetails.extractlogoColor,
         brandDescription:websiteDetails.description,
         keywords:websiteDetails.keywords,
         typography:finalArray
@@ -81,7 +48,6 @@ const postApi = async (req, res, next) => {
                 message: "Website added Successfully to DataBase",
                 response: createData
             })
-
         } else {
             res.status(200).json({
                 error: true,
@@ -97,28 +63,41 @@ const postApi = async (req, res, next) => {
     }
 };
 
-
 async function data (url) {
     // Launch a new browser instance
     const browser = await puppeteer.launch();
     // Create a new page
     const page = await browser.newPage();
-    const websiteUrl = 'https://www.firstcry.com';
+    const websiteUrl = url;
     // Navigate to a URL
     await page.goto(websiteUrl);
   //description
       const description = await page.$eval('meta[name="description"]', (element) => element.content);
-    //   console.log('Website Description:', description);
   //Keywords
       const keywords = await page.evaluate(() => {
         const metaTag = document.querySelector('meta[name="keywords"]');
         return metaTag ? metaTag.getAttribute('content') : ''
       });
-    //   console.log('OutsideKeywords:', keywords);
      //logoSrc
           const logoElement = await page.$('img'); // Assuming the logo is an <img> element
           const logoSrc = await logoElement.evaluate((img) => img.src);
-        //   console.log('Logo URL:', logoSrc);
+// Create a Vibrant object with the logo image
+// let colorResponse 
+//  await fetchcolors(logoSrc).then((res)=>{
+// console.log(res,"responsewert");
+// colorResponse = res
+// })
+
+// by using get-image-colors libraray
+
+const colors = await getColors(logoSrc);
+
+const colorValues = colors.map(color => color.hex());
+console.log(colorValues,'fgh');
+
+// res.json({ colors: colorValues });
+
+
   //fontDetails
     const fontDetails = await page.evaluate(() => {
       const elements = document.querySelectorAll('*');
@@ -157,78 +136,67 @@ async function data (url) {
       });
       // Get website URL
       const websiteURL = page.url();
-    //   console.log('hereeWebsite Name:', websiteName);
-    //   console.log('hereWebsite URL:', websiteURL);
       let obj={
         websiteName:websiteName,
         websiteURL:websiteURL,
         fontDetails:fontDetails,
         logoSrc:logoSrc,
         keywords :keywords,
-        description:description
+        description:description,
+        extractlogoColor:colorValues
       }
     return obj
   //   await browser.close();
   }
 
 
-const deleteUser = async(req,res,next)=>{
-    try{
-      const deleteUserData = await WebSiteScrap.deleteOne({_id:req.params.id})
-      if(deleteUserData){
-        res.status(200).json({
-            error:false,
-            message:'User Deleted Successfully',
-            response: deleteUserData
-        })
-      }else{
-        res.status(400).json({
-            error:true,
-            message:'Something Went Wrong'
-        })
-      }
-    }catch(error){
-      next(error)
-    }
-  }
-
-  const UserPagination = async (req, res, next) => {
+  const updateApi = async (req, res, next) => {
     try {
-        const {
-            currentPage,
-            pageSize
-        } = req.query;
-
-        const skip = parseInt(pageSize) * (parseInt(currentPage) - 1);
-        const limit = parseInt(pageSize);
-        let mixed = await WebSiteScrap.find().limit(limit).skip(skip).exec();
-        let totalmixed = await WebSiteScrap.find();
-        let totalLength = totalmixed.length;
-        if ((totalmixed, mixed)) {
-            res
-                .status(200)
-                .json({
-                    error: false,
-                    message: "WebSiteScrap data Fetched Successfully",
-                    response: mixed,
-                    totalmixed: totalLength,
-                });
-        } else {
-            res.status(404).json({
-                error: true,
-                message: "No WebSiteScrap Data Found",
-            });
-        }
+      const {
+        brandWebsite,
+        brandName,
+        logoofWebsite,
+        brandDescription,
+        keywords,
+        typography
+         } =
+        req.body;
+        const colors = await getColors(req.body.logoofWebsite);
+        const colorValues = colors.map(color => color.hex());
+        const updateData = await  WebSiteScrap.findByIdAndUpdate({
+        _id :req.params.id
+       },
+       {
+        brandWebsite,
+        brandName,
+        logoofWebsite:logoofWebsite,
+        themesOfLogo:colorValues,
+        brandDescription,
+        keywords,
+        typography
+       },
+       {
+       new: true
+      })
+         if (updateData) {
+        res.status(200).json({
+          error: false,
+          message: "Uploaded  Successfully",
+          response: updateData,
+        });
+      } else {
+        res.status(404).json({
+          error: true,
+          message: "No data found",
+        });
+      }
     } catch (err) {
-        next(err);
+      next(err.message);
     }
-};
+  };
+
 
 module.exports = {
-    getAllUser,
-    getUserById,
     postApi,
-    deleteUser,
-    getUserByEmail,
-    UserPagination
+    updateApi
 }
