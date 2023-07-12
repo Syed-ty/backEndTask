@@ -11,7 +11,7 @@ const postApi = async (req, res, next) => {
         } = req.body;
     data(req.body.searchUrl)
   .then(async websiteDetails => {
-    console.log(websiteDetails)
+    // console.log(websiteDetails,'web');
     const fontDetailsArray = websiteDetails.fontDetails;
     function removeDuplicates(fontDetailsArray) {
         const newArray = [];
@@ -31,8 +31,6 @@ const postApi = async (req, res, next) => {
         const trimmedElement = element.fontFamily.replace(/"/g, '');
         finalArray.push(trimmedElement);
      })
-   
-
       const createData = await WebSiteScrap.create({
         brandWebsite:websiteDetails.websiteURL,
         brandName:websiteDetails.websiteName,
@@ -70,12 +68,26 @@ async function data (url) {
     const page = await browser.newPage();
     const websiteUrl = url;
     // Navigate to a URL
-    await page.goto(websiteUrl);
+    await page.goto(websiteUrl, {timeout: 0});
   //description
-      const description = await page.$eval('meta[name="description"]', (element) => element.content);
+
+//   const descriptionElement =await page.$('meta[name="description"]');
+//  let description
+//   if (descriptionElement) {
+//      description = await page.$eval('meta[name="description"]', (element) =>{
+//         element?.content
+//       });
+//   } else {
+//      description = 'No Data Found'
+//   }
+const description = await page.$eval('meta[name="description"]', (element) => element.content);
+
+      
   //Keywords
+  
       const keywords = await page.evaluate(() => {
         const metaTag = document.querySelector('meta[name="keywords"]');
+        console.log(metaTag,'meta')
         return metaTag ? metaTag.getAttribute('content') : ''
       });
      //logoSrc
@@ -93,10 +105,6 @@ async function data (url) {
 const colors = await getColors(logoSrc);
 
 const colorValues = colors.map(color => color.hex());
-console.log(colorValues,'fgh');
-
-// res.json({ colors: colorValues });
-
 
   //fontDetails
     const fontDetails = await page.evaluate(() => {
@@ -149,39 +157,30 @@ console.log(colorValues,'fgh');
   //   await browser.close();
   }
 
-
+ 
   const updateApi = async (req, res, next) => {
     try {
       const {
-        brandWebsite,
-        brandName,
-        logoofWebsite,
-        brandDescription,
-        keywords,
-        typography
+         selectedfile
          } =
         req.body;
-        const colors = await getColors(req.body.logoofWebsite);
+        const colors = await getColors(req.body.selectedfile);
         const colorValues = colors.map(color => color.hex());
-        const updateData = await  WebSiteScrap.findByIdAndUpdate({
+        const updateData = await  WebSiteScrap.findOneAndUpdate({
         _id :req.params.id
-       },
-       {
-        brandWebsite,
-        brandName,
-        logoofWebsite:logoofWebsite,
+       },{
+       $set: {
+        logoofWebsite:selectedfile,
         themesOfLogo:colorValues,
-        brandDescription,
-        keywords,
-        typography
-       },
+       }
+      },
        {
        new: true
       })
          if (updateData) {
         res.status(200).json({
           error: false,
-          message: "Uploaded  Successfully",
+          message: "Updated logo and themes colors are Successfully",
           response: updateData,
         });
       } else {
@@ -196,7 +195,9 @@ console.log(colorValues,'fgh');
   };
 
 
+
 module.exports = {
     postApi,
-    updateApi
+    updateApi,
+    
 }
