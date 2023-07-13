@@ -12,6 +12,8 @@ const postApi = async (req, res, next) => {
     data(req.body.searchUrl)
   .then(async websiteDetails => {
     // console.log(websiteDetails,'web');
+    
+
     const fontDetailsArray = websiteDetails.fontDetails;
     function removeDuplicates(fontDetailsArray) {
         const newArray = [];
