@@ -8,7 +8,7 @@ const urlSchema = new Schema({
     brandName: {
         type: String
     },
-    logoofWebsite: {
+    logooFWebsite: {
         type: String
     },
     
